@@ -418,50 +418,38 @@ player.AncestryChanged:Connect(function()
     end
 end)
 
--- Switch corregido
-local autoProteinEgg = false
-
-local proteinSwitch = autoSnackFolder:AddSwitch("Auto Protein Egg (cada 30 min)", function(state)
-    autoProteinEgg = state
-    if state then
-        AutoProteinEggLoop()
+autoSnackFolder:AddSwitch("Auto Egg 30 minuts", function(enabled)
+    eggRunning = enabled
+    if enabled then
+        task.spawn(function()
+            while eggRunning do
+                local proteinEgg = player.Character:FindFirstChild("Protein Egg") or 
+                                 player.Backpack:FindFirstChild("Protein Egg")
+                if proteinEgg then
+                    MuscleEvent:FireServer("proteinEgg", proteinEgg)
+                end
+                task.wait(1800) -- 30 minutes
+            end
+        end)
     end
 end)
 
--- Equipar solo Protein Egg y activarlo
-local function EquipAndActivateProteinEgg()
-    pcall(function()
-        local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-        local backpack = LocalPlayer.Backpack
-
-        -- 1. Desequipar cualquier herramienta
-        for _, tool in ipairs(character:GetChildren()) do
-            if tool:IsA("Tool") and tool.Name ~= "Protein Egg" then
-                tool.Parent = backpack
+-- Auto Shake Toggle
+autoSnackFolder:AddSwitch("Auto Tropical Shake", function(enabled)
+    shakeRunning = enabled
+    if enabled then
+        task.spawn(function()
+            while shakeRunning do
+                local tropicalShake = player.Character:FindFirstChild("Tropical Shake") or 
+                                    player.Backpack:FindFirstChild("Tropical Shake")
+                if tropicalShake then
+                    MuscleEvent:FireServer("tropicalShake", tropicalShake)
+                end
+                task.wait(0.1) -- 1 minute
             end
-        end
-
-        -- 2. Buscar Protein Egg solo en mochila
-        local proteinEgg = backpack:FindFirstChild("Protein Egg")
-        if proteinEgg then
-            proteinEgg.Parent = character
-        end
-
-        -- 3. Esperar a que esté realmente equipado
-        repeat
-            task.wait(0.1)
-        until character:FindFirstChild("Protein Egg") or not autoProteinEgg
-
-        -- 4. Hacer clics por 5 segundos
-        if character:FindFirstChild("Protein Egg") then
-            local startTime = tick()
-            while tick() - startTime < 5 and autoProteinEgg do
-                VirtualUser:ClickButton1(Vector2.new(0, 0))
-                task.wait(0.1)
-            end
-        end
-    end)
-end
+        end)
+    end
+end)
 
 -- Loop de 30 min
 function AutoProteinEggLoop()
