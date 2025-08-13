@@ -428,22 +428,31 @@ local proteinSwitch = autoSnackFolder:AddSwitch("Auto Protein Egg (cada 30 min)"
     end
 end)
 
--- Equipar y activar Protein Egg
+-- Equipar solo Protein Egg y activarlo
 local function EquipAndActivateProteinEgg()
     pcall(function()
         local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
         local backpack = LocalPlayer.Backpack
 
-        -- Buscar herramienta en mochila o personaje
-        local tool = backpack:FindFirstChild("Protein Egg") or character:FindFirstChild("Protein Egg")
-
-        -- Si está en la mochila, equiparlo
-        if tool and backpack:FindFirstChild(tool.Name) then
-            tool.Parent = character
-            task.wait(0.3)
+        -- 1. Desequipar cualquier herramienta
+        for _, tool in ipairs(character:GetChildren()) do
+            if tool:IsA("Tool") and tool.Name ~= "Protein Egg" then
+                tool.Parent = backpack
+            end
         end
 
-        -- Si está equipado, hacer clics 5 segundos para activarlo
+        -- 2. Buscar Protein Egg solo en mochila
+        local proteinEgg = backpack:FindFirstChild("Protein Egg")
+        if proteinEgg then
+            proteinEgg.Parent = character
+        end
+
+        -- 3. Esperar a que esté realmente equipado
+        repeat
+            task.wait(0.1)
+        until character:FindFirstChild("Protein Egg") or not autoProteinEgg
+
+        -- 4. Hacer clics por 5 segundos
         if character:FindFirstChild("Protein Egg") then
             local startTime = tick()
             while tick() - startTime < 5 and autoProteinEgg do
@@ -454,12 +463,12 @@ local function EquipAndActivateProteinEgg()
     end)
 end
 
--- Loop para repetir el ciclo cada 30 minutos
+-- Loop de 30 min
 function AutoProteinEggLoop()
     task.spawn(function()
         while autoProteinEgg do
             EquipAndActivateProteinEgg()
-            for i = 1, 1800 do -- 1800 segundos = 30 min
+            for i = 1, 1800 do -- 1800 segundos = 30 minutos
                 if not autoProteinEgg then break end
                 task.wait(1)
             end
