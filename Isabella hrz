@@ -451,19 +451,6 @@ autoSnackFolder:AddSwitch("Auto Tropical Shake", function(enabled)
     end
 end)
 
--- Loop de 30 min
-function AutoProteinEggLoop()
-    task.spawn(function()
-        while autoProteinEgg do
-            EquipAndActivateProteinEgg()
-            for i = 1, 1800 do -- 1800 segundos = 30 minutos
-                if not autoProteinEgg then break end
-                task.wait(1)
-            end
-        end
-    end)
-end
-
 -- Extras Folder
 local MSCCFolder = mainTab:AddFolder("  Extras")
 
