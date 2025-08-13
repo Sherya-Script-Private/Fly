@@ -35,7 +35,7 @@ local function safeCall(func, ...)
 end
 
 -- UI Window
-local window = library:AddWindow("Sherya Script Free Version", {
+local window = library:AddWindow("Sherya Script", {
     main_color = Color3.fromRGB(75, 0, 130),
     min_size = Vector2.new(600, 650),
     can_resize = true,
@@ -44,6 +44,8 @@ local window = library:AddWindow("Sherya Script Free Version", {
 local mainTab = window:AddTab("Main")
 local farmTab = window:AddTab("Farm")
 local miscTab = window:AddTab("Misc")
+local pets = window:AddTab("Pets")
+local Stats = window:AddTab("Stats")
 local Killing = window:AddTab("Killer")
 local Teleport = window:AddTab("Teleport")
 local creditsTab = window:AddTab("Credits")
@@ -77,7 +79,7 @@ local autoWinBrawl = BrawlFolder:AddSwitch("Auto Win Brawls", function(bool)
     local function isValidTarget(player)
         if not player or not player.Parent then return false end
         if player == Players.LocalPlayer then return false end
-        if whitelist and whitelist[player.UserId] then return false end
+        if _G.whitelistedPlayers and table.find(_G.whitelistedPlayers, player.Name) then return false end
         local character = player.Character
         if not character or not character.Parent then return false end
         local humanoid = character:FindFirstChild("Humanoid")
@@ -115,10 +117,12 @@ local autoWinBrawl = BrawlFolder:AddSwitch("Auto Win Brawls", function(bool)
     task.spawn(function()
         while getgenv().autoWinBrawl and task.wait(0.5) do
             if not getgenv().autoWinBrawl then break end
-            if game.Players.LocalPlayer.PlayerGui.gameGui.brawlJoinLabel.Visible then
-                game.ReplicatedStorage.rEvents.brawlEvent:FireServer("joinBrawl")
-                game.Players.LocalPlayer.PlayerGui.gameGui.brawlJoinLabel.Visible = false
-            end
+            pcall(function()
+                if game.Players.LocalPlayer.PlayerGui.gameGui.brawlJoinLabel.Visible then
+                    game.ReplicatedStorage.rEvents.brawlEvent:FireServer("joinBrawl")
+                    game.Players.LocalPlayer.PlayerGui.gameGui.brawlJoinLabel.Visible = false
+                end
+            end)
         end
     end)
 
@@ -172,10 +176,12 @@ BrawlFolder:AddSwitch("Auto Join Brawls", function(bool)
     task.spawn(function()
         while getgenv().autoJoinBrawl and task.wait(0.5) do
             if not getgenv().autoJoinBrawl then break end
-            if game.Players.LocalPlayer.PlayerGui.gameGui.brawlJoinLabel.Visible then
-                game.ReplicatedStorage.rEvents.brawlEvent:FireServer("joinBrawl")
-                game.Players.LocalPlayer.PlayerGui.gameGui.brawlJoinLabel.Visible = false
-            end
+            pcall(function()
+                if game.Players.LocalPlayer.PlayerGui.gameGui.brawlJoinLabel.Visible then
+                    game.ReplicatedStorage.rEvents.brawlEvent:FireServer("joinBrawl")
+                    game.Players.LocalPlayer.PlayerGui.gameGui.brawlJoinLabel.Visible = false
+                end
+            end)
         end
     end)
 end)
@@ -359,7 +365,7 @@ end
 
 local function startSnackLoop(itemName)
     if snackConnections[itemName] then
-        snackConnections[itemName]:Disconnect()
+        task.cancel(snackConnections[itemName])
         snackConnections[itemName] = nil
     end
     
@@ -409,6 +415,44 @@ player.AncestryChanged:Connect(function()
             end
         end
         snackConnections = {}
+    end
+end)
+
+-- Auto Protein Egg (CORREGIDO)
+local autoProteinEgg = false
+
+-- Switch corregido
+local proteinSwitch = mainTab:AddSwitch("Auto Protein Egg 30 Minutos", function(state)
+    autoProteinEgg = state
+    if state then
+        EquipAndUseProteinEgg() -- lo ejecuta inmediatamente
+    end
+end)
+
+-- Función para equipar y usar la herramienta
+function EquipAndUseProteinEgg()
+    pcall(function()
+        local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        local backpack = LocalPlayer.Backpack
+        local tool = character:FindFirstChild("Protein Egg") or backpack:FindFirstChild("Protein Egg")
+
+        if tool and backpack:FindFirstChild(tool.Name) then
+            tool.Parent = character
+            task.wait(0.5)
+        end
+
+        if character:FindFirstChild("Protein Egg") then
+            VirtualUser:ClickButton1(Vector2.new(0, 0))
+        end
+    end)
+end
+
+-- Loop para activarlo cada 30 minutos
+task.spawn(function()
+    while task.wait(1800) do -- 1800 segundos = 30 min
+        if autoProteinEgg then
+            EquipAndUseProteinEgg()
+        end
     end
 end)
 
@@ -497,29 +541,30 @@ end
 
 local function createRockSwitch(name, selectRockName, durabilityRequirement)
     autoRockFolder:AddSwitch(name, function(Value)
-        selectrock = selectRockName
         getgenv().autoFarm = Value
         
         task.spawn(function()
             while getgenv().autoFarm do
                 if not getgenv().autoFarm then break end
                 
-                if LocalPlayer.Durability.Value >= durabilityRequirement then
-                    local character = LocalPlayer.Character
-                    if character and character:FindFirstChild("LeftHand") and character:FindFirstChild("RightHand") then
-                        for i, v in pairs(Workspace.machinesFolder:GetDescendants()) do
-                            if v.Name == "neededDurability" and v.Value == durabilityRequirement then
-                                local rock = v.Parent.Rock
-                                firetouchinterest(rock, character.RightHand, 0)
-                                firetouchinterest(rock, character.RightHand, 1)
-                                firetouchinterest(rock, character.LeftHand, 0)
-                                firetouchinterest(rock, character.LeftHand, 1)
-                                gettool()
-                                break
+                pcall(function()
+                    if LocalPlayer.Durability.Value >= durabilityRequirement then
+                        local character = LocalPlayer.Character
+                        if character and character:FindFirstChild("LeftHand") and character:FindFirstChild("RightHand") then
+                            for i, v in pairs(Workspace.machinesFolder:GetDescendants()) do
+                                if v.Name == "neededDurability" and v.Value == durabilityRequirement then
+                                    local rock = v.Parent.Rock
+                                    firetouchinterest(rock, character.RightHand, 0)
+                                    firetouchinterest(rock, character.RightHand, 1)
+                                    firetouchinterest(rock, character.LeftHand, 0)
+                                    firetouchinterest(rock, character.LeftHand, 1)
+                                    gettool()
+                                    break
+                                end
                             end
                         end
                     end
-                end
+                end)
                 task.wait()
             end
         end)
@@ -1280,6 +1325,385 @@ misc4Folder:AddSwitch("Hide Pets", function(State)
 end)
 
 -- ============================================================================
+-- PETS TAB
+-- ============================================================================
+
+local crystalData = {
+    ["Blue Crystal"] = {
+        {name = "Blue Birdie", rarity = "Basic"},
+        {name = "Orange Hedgehog", rarity = "Basic"},
+        {name = "Blue Aura", rarity = "Basic"},
+        {name = "Red Kitty", rarity = "Basic"},
+        {name = "Dark Vampy", rarity = "Advanced"},
+        {name = "Blue Bunny", rarity = "Basic"},
+        {name = "Red Aura", rarity = "Basic"},
+        {name = "Green Aura", rarity = "Basic"},
+        {name = "Purple Aura", rarity = "Basic"},
+        {name = "Yellow Aura", rarity = "Basic"}
+    },
+    ["Green Crystal"] = {
+        {name = "Silver Dog", rarity = "Basic"},
+        {name = "Green Aura", rarity = "Advanced"},
+        {name = "Dark Golem", rarity = "Advanced"},
+        {name = "Green Butterfly", rarity = "Advanced"},
+        {name = "Crimson Falcon", rarity = "Rare"},
+        {name = "Red Aura", rarity = "Basic"},
+        {name = "Blue Aura", rarity = "Basic"},
+        {name = "Purple Aura", rarity = "Basic"},
+        {name = "Yellow Aura", rarity = "Basic"}
+    },
+    ["Frost Crystal"] = {
+        {name = "Yellow Butterfly", rarity = "Advanced"},
+        {name = "Purple Dragon", rarity = "Rare"},
+        {name = "Blue Pheonix", rarity = "Epic"},
+        {name = "Orange Pegasus", rarity = "Rare"},
+        {name = "Lightning", rarity = "Rare"},
+        {name = "Electro", rarity = "Advanced"}
+    },
+    ["Mythical Crystal"] = {
+        {name = "Purple Falcon", rarity = "Rare"},
+        {name = "Red Dragon", rarity = "Rare"},
+        {name = "Blue Firecaster", rarity = "Epic"},
+        {name = "Golden Pheonix", rarity = "Epic"},
+        {name = "Power Lightning", rarity = "Rare"},
+        {name = "Dark Lightning", rarity = "Epic"}
+    },
+    ["Inferno Crystal"] = {
+        {name = "Red Firecaster", rarity = "Epic"},
+        {name = "Infernal Dragon", rarity = "Unique"},
+        {name = "White Pegasus", rarity = "Rare"},
+        {name = "Golden Pheonix", rarity = "Epic"},
+        {name = "Inferno", rarity = "Epic"},
+        {name = "Dark Storm", rarity = "Unique"}
+    },
+    ["Legends Crystal"] = {
+        {name = "Ultra Birdie", rarity = "Unique"},
+        {name = "Magic Butterfly", rarity = "Unique"},
+        {name = "Green Firecaster", rarity = "Epic"},
+        {name = "White Pheonix", rarity = "Epic"},
+        {name = "Supernova", rarity = "Epic"},
+        {name = "Purple Nova", rarity = "Unique"}
+    },
+    ["Muscle Elite Crystal"] = {
+        {name = "Frostwave Legends Penguin", rarity = "Rare"},
+        {name = "Phantom Genesis Dragon", rarity = "Rare"},
+        {name = "Dark Legends Manticore", rarity = "Epic"},
+        {name = "Ultimate Supernova Pegasus", rarity = "Epic"},
+        {name = "Aether Spirit Bunny", rarity = "Unique"},
+        {name = "Cybernetic Showdown Dragon", rarity = "Unique"}
+    },
+    ["Galaxy Oracle Crystal"] = {
+        {name = "Eternal Strike Leviathan", rarity = "Rare"},
+        {name = "Lightning Strike Phantom", rarity = "Epic"},
+        {name = "Darkstar Hunter", rarity = "Unique"},
+        {name = "Muscle King", rarity = "Unique"},
+        {name = "Azure Tundra", rarity = "Epic"},
+        {name = "Ultra Inferno", rarity = "Rare"}
+    },
+    ["Jungle Crystal"] = {
+        {name = "Entropic Blast", rarity = "Unique"},
+        {name = "Muscle Sensei", rarity = "Unique"},
+        {name = "Grand Supernova", rarity = "Epic"},
+        {name = "Neon Guardian", rarity = "Unique"},
+        {name = "Eternal Megastrike", rarity = "Unique"},
+        {name = "Golden Viking", rarity = "Epic"},
+        {name = "Astral Electro", rarity = "Epic"},
+        {name = "Dark Electro", rarity = "Epic"},
+        {name = "Enchanted Mirage", rarity = "Epic"},
+        {name = "Ultra Mirage", rarity = "Unique"},
+        {name = "Unstable Mirage", rarity = "Unique"}
+    }
+}
+
+-- Function to find which crystal contains a specific pet/aura
+local function findCrystalForItem(itemName)
+    for crystalName, pets in pairs(crystalData) do
+        for _, pet in ipairs(pets) do
+            if pet.name == itemName then
+                return crystalName
+            end
+        end
+    end
+    return nil
+end
+
+-- Variables to track current selections
+local selectedPet = ""
+local selectedAura = ""
+
+pets:AddLabel("=== Pet & Aura Auto Buy ===")
+
+-- Pet dropdown
+local petDropdown = pets:AddDropdown("Select Pet", function(text)
+    selectedPet = text
+    local crystal = findCrystalForItem(text)
+    print("Pet selected: " .. text .. " (Found in: " .. (crystal or "Unknown") .. ")")
+end)
+
+-- Add pets sorted by rarity
+local petOptions = {
+    "Blue Birdie", "Orange Hedgehog", "Red Kitty", "Blue Bunny", "Silver Dog",
+    "Dark Vampy", "Dark Golem", "Green Butterfly", "Yellow Butterfly",
+    "Crimson Falcon", "Purple Dragon", "Orange Pegasus", "Purple Falcon", 
+    "Red Dragon", "White Pegasus", "Frostwave Legends Penguin", "Phantom Genesis Dragon", 
+    "Eternal Strike Leviathan", "Blue Pheonix", "Blue Firecaster", "Golden Pheonix", 
+    "Red Firecaster", "Green Firecaster", "White Pheonix", "Dark Legends Manticore", 
+    "Ultimate Supernova Pegasus", "Lightning Strike Phantom", "Golden Viking",
+    "Infernal Dragon", "Ultra Birdie", "Magic Butterfly", "Aether Spirit Bunny", 
+    "Cybernetic Showdown Dragon", "Darkstar Hunter", "Muscle Sensei", "Neon Guardian"
+}
+
+for _, pet in ipairs(petOptions) do
+    petDropdown:Add(pet)
+end
+
+-- Aura dropdown
+local auraDropdown = pets:AddDropdown("Select Aura", function(text)
+    selectedAura = text
+    local crystal = findCrystalForItem(text)
+    print("Aura selected: " .. text .. " (Found in: " .. (crystal or "Unknown") .. ")")
+end)
+
+local auraOptions = {
+    "Blue Aura", "Green Aura", "Purple Aura", "Red Aura", "Yellow Aura",
+    "Ultra Inferno", "Azure Tundra", "Grand Supernova", "Muscle King", 
+    "Entropic Blast", "Eternal Megastrike"
+}
+
+for _, aura in ipairs(auraOptions) do
+    auraDropdown:Add(aura)
+end
+
+pets:AddLabel("=== Auto Buy Controls ===")
+
+-- Auto buy pet toggle
+pets:AddSwitch("Auto Buy Pet", function(bool)
+    _G.AutoBuyPet = bool
+    
+    if bool then
+        if selectedPet == "" then
+            print("Please select a pet first!")
+            return
+        end
+        
+        print("Auto buy pet started for: " .. selectedPet)
+        spawn(function()
+            while _G.AutoBuyPet and selectedPet ~= "" do
+                local petToBuy = ReplicatedStorage.cPetShopFolder:FindFirstChild(selectedPet)
+                if petToBuy then
+                    safeCall(function()
+                        ReplicatedStorage.cPetShopRemote:InvokeServer(petToBuy)
+                    end)
+                    print("Bought pet: " .. selectedPet)
+                else
+                    print("Pet not found: " .. selectedPet)
+                end
+                task.wait(1)
+            end
+        end)
+    else
+        print("Auto buy pet stopped")
+    end
+end)
+
+-- Auto buy aura toggle
+pets:AddSwitch("Auto Buy Aura", function(bool)
+    _G.AutoBuyAura = bool
+    
+    if bool then
+        if selectedAura == "" then
+            print("Please select an aura first!")
+            return
+        end
+        
+        print("Auto buy aura started for: " .. selectedAura)
+        spawn(function()
+            while _G.AutoBuyAura and selectedAura ~= "" do
+                local auraToBuy = ReplicatedStorage.cPetShopFolder:FindFirstChild(selectedAura)
+                if auraToBuy then
+                    safeCall(function()
+                        ReplicatedStorage.cPetShopRemote:InvokeServer(auraToBuy)
+                    end)
+                    print("Bought aura: " .. selectedAura)
+                else
+                    print("Aura not found: " .. selectedAura)
+                end
+                task.wait(1)
+            end
+        end)
+    else
+        print("Auto buy aura stopped")
+    end
+end)
+
+pets:AddLabel("=== Ultimate Upgrades ===")
+
+-- Ultimate options
+local ultimateOptions = {
+    "+1 Daily Spin",
+    "+1 Pet Slot",
+    "+10 Item Capacity",
+    "+5% Rep Speed",
+    "Demon Damage",
+    "Galaxy Gains",
+    "Golden Rebirth",
+    "Jungle Swift",
+    "Muscle Mind",
+    "x2 Chest Rewards",
+    "x2 Quest Rewards"
+}
+
+-- Variable to track selected ultimate
+local selectedUltimate = ""
+
+-- Ultimate dropdown
+local ultimateDropdown = pets:AddDropdown("Select Ultimate", function(text)
+    selectedUltimate = text
+    print("Ultimate selected: " .. text)
+end)
+
+-- Add all ultimate options to dropdown
+for _, ultimate in ipairs(ultimateOptions) do
+    ultimateDropdown:Add(ultimate)
+end
+
+-- Auto upgrade ultimate toggle
+pets:AddSwitch("Auto Upgrade Ultimate", function(bool)
+    _G.AutoUpgradeUltimate = bool
+    
+    if bool then
+        if selectedUltimate == "" then
+            print("Please select an ultimate first!")
+            return
+        end
+        
+        print("Auto upgrade ultimate started for: " .. selectedUltimate)
+        spawn(function()
+            while _G.AutoUpgradeUltimate and selectedUltimate ~= "" do
+                safeCall(function()
+                    game:GetService("ReplicatedStorage").rEvents.ultimatesRemote:InvokeServer(
+                        "upgradeUltimate",
+                        selectedUltimate
+                    )
+                end)
+                print("Upgraded ultimate: " .. selectedUltimate)
+                task.wait(1)
+            end
+        end)
+    else
+        print("Auto upgrade ultimate stopped")
+    end
+end)
+
+-- ============================================================================
+-- STATS TAB
+-- ============================================================================
+
+local function abbreviateNumber(value)
+    if value >= 1e15 then
+        return string.format("%.1fQa", value / 1e15)
+    elseif value >= 1e12 then
+        return string.format("%.1fT", value / 1e12)
+    elseif value >= 1e9 then
+        return string.format("%.1fB", value / 1e9)
+    elseif value >= 1e6 then
+        return string.format("%.1fM", value / 1e6)
+    elseif value >= 1e3 then
+        return string.format("%.1fK", value / 1e3)
+    else
+        return tostring(value)
+    end
+end
+
+local labels = {
+    TimeSpentLabel = Stats:AddLabel("Time spent in this server: 00:00"),
+    StrengthGainedLabel = Stats:AddLabel("Amount of strength gained in this server: 0"),
+    DurabilityGainedLabel = Stats:AddLabel("Amount of durability gained in this server: 0"),
+    AgilityGainedLabel = Stats:AddLabel("Amount of agility gained in this server: 0"),
+    KillsGainedLabel = Stats:AddLabel("Amount of kills gained in this server: 0"),
+    EvilKarmaGainedLabel = Stats:AddLabel("Amount of Evil Karma gained in this server: 0"),
+    GoodKarmaGainedLabel = Stats:AddLabel("Amount of Good Karma gained in this server: 0"),
+    RebirthsGainedLabel = Stats:AddLabel("Amount of rebirths gained in this server: 0")
+}
+
+local function createMyLabels()
+    local player = game.Players.LocalPlayer
+    if not player then
+        warn("Player not found!")
+        return
+    end
+
+    local leaderstats = player:WaitForChild("leaderstats", 10)
+    if not leaderstats then
+        warn("leaderstats not found!")
+        return
+    end
+
+    local strengthStat = leaderstats:WaitForChild("Strength", 5)
+    local durabilityStat = player:WaitForChild("Durability", 5)
+    local agilityStat = player:WaitForChild("Agility", 5)
+    local killsStat = leaderstats:WaitForChild("Kills", 5)
+    local evilKarmaStat = player:WaitForChild("evilKarma", 5)
+    local goodKarmaStat = player:WaitForChild("goodKarma", 5)
+    local rebirthStat = leaderstats:WaitForChild("Rebirths", 5)
+
+    if not (strengthStat and durabilityStat and agilityStat and killsStat and evilKarmaStat and goodKarmaStat and rebirthStat) then
+        warn("One or more stats not found! Check stat names.")
+        return
+    end
+
+    local initialStrength = strengthStat.Value or 0
+    local initialDurability = durabilityStat.Value or 0
+    local initialAgility = agilityStat.Value or 0
+    local initialKills = killsStat.Value or 0
+    local initialEvilKarma = evilKarmaStat.Value or 0
+    local initialGoodKarma = goodKarmaStat.Value or 0
+    local initialRebirths = rebirthStat.Value or 0
+
+    local startTime = tick()
+
+    local function updateLabels()
+        local strengthGained = strengthStat.Value - initialStrength
+        local durabilityGained = durabilityStat.Value - initialDurability
+        local agilityGained = agilityStat.Value - initialAgility
+        local killsGained = killsStat.Value - initialKills
+        local evilKarmaGained = evilKarmaStat.Value - initialEvilKarma
+        local goodKarmaGained = goodKarmaStat.Value - initialGoodKarma
+        local rebirthsGained = rebirthStat.Value - initialRebirths
+
+        labels.StrengthGainedLabel.Text = "Amount of strength gained in this server: " .. abbreviateNumber(strengthGained)
+        labels.DurabilityGainedLabel.Text = "Amount of durability gained in this server: " .. abbreviateNumber(durabilityGained)
+        labels.AgilityGainedLabel.Text = "Amount of agility gained in this server: " .. abbreviateNumber(agilityGained)
+        labels.KillsGainedLabel.Text = "Amount of kills gained in this server: " .. abbreviateNumber(killsGained)
+        labels.EvilKarmaGainedLabel.Text = "Amount of Evil Karma gained in this server: " .. abbreviateNumber(evilKarmaGained)
+        labels.GoodKarmaGainedLabel.Text = "Amount of Good Karma gained in this server: " .. abbreviateNumber(goodKarmaGained)
+        labels.RebirthsGainedLabel.Text = "Amount of rebirths gained in this server: " .. abbreviateNumber(rebirthsGained)
+    end
+
+    local function updateTimeSpent()
+        local timeSpent = tick() - startTime
+        local minutes = math.floor(timeSpent / 60)
+        local seconds = math.floor(timeSpent % 60)
+        labels.TimeSpentLabel.Text = string.format("Time spent in this server: %02d:%02d", minutes, seconds)
+    end
+
+    -- Conectar eventos de cambio
+    pcall(function() strengthStat.Changed:Connect(updateLabels) end)
+    pcall(function() durabilityStat.Changed:Connect(updateLabels) end)
+    pcall(function() agilityStat.Changed:Connect(updateLabels) end)
+    pcall(function() killsStat.Changed:Connect(updateLabels) end)
+    pcall(function() evilKarmaStat.Changed:Connect(updateLabels) end)
+    pcall(function() goodKarmaStat.Changed:Connect(updateLabels) end)
+    pcall(function() rebirthStat.Changed:Connect(updateLabels) end)
+
+    game:GetService("RunService").Heartbeat:Connect(updateTimeSpent)
+
+    updateLabels()
+end
+
+createMyLabels()
+
+-- ============================================================================
 -- KILLER TAB
 -- ============================================================================
 
@@ -1837,11 +2261,7 @@ Killing:AddSwitch("Punch Death", function(value)
 end)
 
 -- Death Ring and Kill Aura
-local ttleLabel = Killing:AddLabel("Kill Aura ")
-_G.deathRingRange = 20
-_G.targetPlayer = nil
-_G.killPlayerEnabled = false
-_G.deathRingEnabled = false
+Killing:AddLabel("---Kill Aura---")
 
 local function findPlayerByName(name)
     if not name or name == "" then return nil end
@@ -1877,7 +2297,7 @@ Killing:AddSwitch("Death Ring", function(bool)
 
                 for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
                     if player == game.Players.LocalPlayer or isWhitelisted(player) then
-                        continue
+                        continue                        
                     end
 
                     if isPlayerAlive(player) then
