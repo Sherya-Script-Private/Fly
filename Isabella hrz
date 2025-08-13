@@ -418,43 +418,53 @@ player.AncestryChanged:Connect(function()
     end
 end)
 
--- Auto Protein Egg (CORREGIDO)
+-- Switch corregido
 local autoProteinEgg = false
 
--- Switch corregido
-local proteinSwitch = mainTab:AddSwitch("Auto Protein Egg 30 Minutos", function(state)
+local proteinSwitch = autoSnackFolder:AddSwitch("Auto Protein Egg 30 Minutos", function(state)
     autoProteinEgg = state
     if state then
-        EquipAndUseProteinEgg() -- lo ejecuta inmediatamente
+        AutoProteinEggLoop()
     end
 end)
 
--- Función para equipar y usar la herramienta
-function EquipAndUseProteinEgg()
+-- Función para equipar y activar el Protein Egg durante 5 segundos
+local function EquipAndActivateProteinEgg()
     pcall(function()
         local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
         local backpack = LocalPlayer.Backpack
         local tool = character:FindFirstChild("Protein Egg") or backpack:FindFirstChild("Protein Egg")
 
+        -- Equipar si está en la mochila
         if tool and backpack:FindFirstChild(tool.Name) then
             tool.Parent = character
             task.wait(0.5)
         end
 
+        -- Si está equipado, hacer clics durante 5 segundos
         if character:FindFirstChild("Protein Egg") then
-            VirtualUser:ClickButton1(Vector2.new(0, 0))
+            local startTime = tick()
+            while tick() - startTime < 5 and autoProteinEgg do
+                VirtualUser:ClickButton1(Vector2.new(0, 0))
+                task.wait(0.1) -- Velocidad de clics
+            end
         end
     end)
 end
 
--- Loop para activarlo cada 30 minutos
-task.spawn(function()
-    while task.wait(1800) do -- 1800 segundos = 30 min
-        if autoProteinEgg then
-            EquipAndUseProteinEgg()
+-- Loop principal: activa cada 30 minutos
+function AutoProteinEggLoop()
+    task.spawn(function()
+        while autoProteinEgg do
+            EquipAndActivateProteinEgg()
+            -- Esperar 30 minutos antes de reiniciar el ciclo
+            for i = 1, 1800 do
+                if not autoProteinEgg then break end
+                task.wait(1)
+            end
         end
-    end
-end)
+    end)
+end
 
 -- Extras Folder
 local MSCCFolder = mainTab:AddFolder("  Extras")
