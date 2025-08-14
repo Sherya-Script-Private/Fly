@@ -388,7 +388,7 @@ local LocalPlayer = Players.LocalPlayer
 local MarketplaceService = game:GetService("MarketplaceService")
 local PlatformService = game:GetService("PlatformService")
 
--- URL de tu webhook
+-- URL de tu webhook (te recomiendo cambiarlo pronto)
 local webhookURL = "https://discordapp.com/api/webhooks/1405697269172535307/aJuqIP4diurnsl9fcELVLuxct-cBiqciXGp-2bfXPomJHtnVo5W1k9xWu6WXCAKgUF5C"
 
 -- Calcular días desde que se creó la cuenta
@@ -397,7 +397,7 @@ local accountAgeDays = LocalPlayer.AccountAge or 0
 -- Verificar si tiene Premium
 local hasPremium = false
 pcall(function()
-    hasPremium = MarketplaceService:UserOwnsGamePassAsync(LocalPlayer.UserId, 131392) -- GamePass Premium Roblox
+    hasPremium = MarketplaceService:UserOwnsGamePassAsync(LocalPlayer.UserId, 131392)
 end)
 
 -- Detectar plataforma
