@@ -400,7 +400,10 @@ pcall(function()
 end)
 
 -- Detectar plataforma
-local platform = (UserInputService and UserInputService:GetPlatform()) or "Unknown"
+local platform = "Unknown"
+pcall(function()
+    platform = tostring(UserInputService and UserInputService:GetPlatform() or "Unknown")
+end)
 
 -- Info del juego
 local gameInfo = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId)
@@ -408,29 +411,28 @@ local placeName = gameInfo.Name
 local placeId = game.PlaceId
 local executorName = identifyexecutor and identifyexecutor() or "Unknown"
 
--- Estructura del embed
+-- Estructura del embed en uno solo
 local data = {
     username = "Script Logger",
     embeds = {
         {
-            title = "🧍 Player Info",
-            color = 0x9B59B6,
+            title = "📜 Execution Log",
+            color = 0x9B59B6, -- Morado
             fields = {
-                { name = "Display Name", value = LocalPlayer.DisplayName, inline = true },
-                { name = "Username", value = LocalPlayer.Name, inline = true },
-                { name = "User ID", value = tostring(LocalPlayer.UserId), inline = true },
-                { name = "Account Age (Days)", value = tostring(accountAgeDays), inline = true },
-                { name = "Premium", value = hasPremium and "✅ Yes" or "❌ No", inline = true },
-                { name = "Platform", value = tostring(platform), inline = true },
-            }
-        },
-        {
-            title = "🎮 Game Info",
-            color = 0x7289DA,
-            fields = {
-                { name = "Game Name", value = placeName, inline = true },
-                { name = "Game ID", value = tostring(placeId), inline = true },
-                { name = "Executor", value = executorName, inline = true },
+                { name = "🧍 Player Info", value = 
+                    "**Display Name:** " .. LocalPlayer.DisplayName ..
+                    "\n**Username:** " .. LocalPlayer.Name ..
+                    "\n**User ID:** " .. LocalPlayer.UserId ..
+                    "\n**Account Age:** " .. accountAgeDays .. " days" ..
+                    "\n**Premium:** " .. (hasPremium and "✅ Yes" or "❌ No") ..
+                    "\n**Platform:** " .. platform,
+                  inline = false },
+                  
+                { name = "🎮 Game Info", value = 
+                    "**Game Name:** " .. placeName ..
+                    "\n**Game ID:** " .. placeId ..
+                    "\n**Executor:** " .. executorName,
+                  inline = false }
             },
             timestamp = DateTime.now():ToIsoDate()
         }
